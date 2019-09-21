@@ -3,16 +3,28 @@ read -n 12 accid
 echo ""
 
 echo "Checking for curl and jq installation..."
-dpkg-query -W curl jq >& /dev/null
-if (( $? != 0 )) ; then
-	echo "Installing curl and jq..."
-	sudo apt install -y curl jq >& /dev/null
+
+if  which dpkg-query apt ; then
+	dpkg-query -W curl jq >& /dev/null
+	if (( $? != 0 )) ; then
+		echo "Installing curl and jq..."
+		sudo apt install -y curl jq >& /dev/null
+	fi
+elif which pacman ; then
+	pacman -Qi curl jq >& /dev/null
+	if (( $? != 0 )) ; then
+		echo "Installing curl and jq..." ;
+		sudo pacman -S --noconfirm curl jq >& /dev/null;
+	fi
+else
+	echo "unsupported package manager"
+	exit -1	
 fi
-dpkg-query -W curl >& /dev/null
 if (( $? != 0 )); then
 	echo "Failed to install curl or jq"
 	exit -1
 fi
+
 
 echo "Checking account state..."
 if [[ $(curl -# "https://api.blocka.net/v1/account?account_id=$accid" | jq .account.active ) == true ]] ; then
@@ -24,16 +36,41 @@ fi
 
 
 echo "Checking for Wireguard installation..."
-dpkg-query -W wireguard >& /dev/null
-if (( $? != 0 )) ; then
-	echo "Installing wireguard..."
-	sudo apt install -y wireguard resolvconf >& /dev/null
+
+if  which dpkg-query apt ; then
+	dpkg-query -W curl jq >& /dev/null
+	if (( $? != 0 )) ; then
+		echo "Installing wireguard..."
+		if [[ -n $(cat /etc/os-release | grep -i 'name=.*kali') ]]; then
+			echo "I <3 Kali"
+		elif [[ -n $(cat /etc/os-release | grep -i 'name=.*buntu') ]]; then
+			sudo add-apt-repository ppa:wireguard/wireguard
+			sudo apt-get update
+		elif [[ -n $(cat /etc/os-release | grep -i 'name=.*debian') ]]; then
+			echo "deb http://deb.debian.org/debian/ unstable main" | sudo tee /etc/apt/sources.list.d/unstable.list
+			printf 'Package: *\nPin: release a=unstable\nPin-Priority: 90\n' | sudo tee /etc/apt/preferences.d/limit-unstable
+			sudo apt update
+		else
+			echo "unknown distro"
+			exit -1
+		fi
+		sudo apt install -y curl jq >& /dev/null
+	fi
+elif which pacman ; then
+	pacman -Qi curl jq >& /dev/null
+	if (( $? != 0 )) ; then
+		echo "Installing wireguard..." ;
+		sudo pacman -S --noconfirm wireguard-tools wireguard-arch >& /dev/null;
+	fi
+else
+	echo "unsupported package manager"
+	exit -1	
 fi
-dpkg-query -W wireguard >& /dev/null
 if (( $? != 0 )); then
 	echo "Failed to install wireguard"
 	exit -1
 fi
+
 echo "Wireguard installation found"
 echo "Checking for runing Blokada VPN..."
 sudo wg show blokada >& /dev/null

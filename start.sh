@@ -2,20 +2,20 @@ echo "What's the account id?"
 read -n 12 accid
 echo ""
 
-echo "Checking for curl installation..."
+echo "Checking for curl and jq installation..."
 dpkg-query -W curl jq >& /dev/null
 if (( $? != 0 )) ; then
-	echo "Installing curl..."
+	echo "Installing curl and jq..."
 	sudo apt install -y curl jq >& /dev/null
 fi
 dpkg-query -W curl >& /dev/null
 if (( $? != 0 )); then
-	echo "Failed to install curl"
+	echo "Failed to install curl or jq"
 	exit -1
 fi
 
 echo "Checking account state..."
-if [[ -n $(curl -# "https://api.blocka.net/v1/account?account_id=$accid" | grep -o '"active":true') ]] ; then
+if [[ $(curl -# "https://api.blocka.net/v1/account?account_id=$accid" | jq .account.active ) == true ]] ; then
 	echo "Account is active. Starting wireguard setup."
 else
 	echo "Account is inactive. Activate your account and try again."
@@ -57,46 +57,43 @@ else
 	echo "Keypair found."
 fi
 
-GATEWAYS=($(curl -# "https://api.blocka.net/v1/gateway" | grep -o '{"public_key"[^}]*"}'))
+GATEWAYS=$(curl -# "https://api.blocka.net/v1/gateway")
 echo "Gateways:"
-for i in "${!GATEWAYS[@]}"; do
-  echo -n $i ": "
-  echo "${GATEWAYS[$i]}" | sed -E -e 's/.*,"location":"([a-zA-Z-]*)",.*/\1/' -e 's/-/ /' -e "s/\b(.)/\u\1/g"
+for ((i=0;i<=$(echo $GATEWAYS | jq '.gateways | length - 1');i++)); do
+  echo -n $i ':'
+  echo $( echo $GATEWAYS | jq ".gateways[$i].location" ) | sed -E -e 's/[-"]/ /g' -e 's/\b(.)/\u\1/g'
 done
 
-while [[ ! -v GATEWAYS[$selgateway] ]]
+while [[ -z $selgateway ]] || [[ $(echo $GATEWAYS | jq ".gateways[$selgateway]") == null ]]
 do
 	echo "Which gateway do you want to use?"
 	read selgateway
 done
 
-GATEWAYPUB=$(echo ${GATEWAYS[$selgateway]} | sed -E -e 's/.*"public_key":"([^"]*)",.*/\1/')
+GATEWAYPUB=$(echo $GATEWAYS | jq ".gateways[$selgateway].public_key")
 CLIENTPUB=$(sudo cat blokada_pub)
 
 echo "Looking for existing lease..."
 
 LEASES=$(curl -# "https://api.blocka.net/v1/lease?account_id=$accid")
-LEASE=$(echo $LEASES | sed -E -e "s/.*\{\"account_id\":\"$accid\",\
-\"public_key\":\"$(echo $CLIENTPUB | sed -E -e 's/([/+])/\\\1/')\",([^\}]*)\}.*/\1/" -e "s/\{\"leases\".*//")
-
-if [[ -n $(echo $LEASE | grep -o "\"gateway_id\":\"$GATEWAYPUB\"") ]] ; then
+LEASE=$(echo $LEASES | jq ".leases | map(select(.account_id == \"$accid\")) | map(select(.public_key == \"$CLIENTPUB\"))[0]")
+if [[ $(echo $LEASE | jq ".gateway_id") == $GATEWAYPUB ]] ; then
 	echo "Already active."
 else
-	if [[ -n $LEASE ]] ; then
+	if [[ $LEASE != "null" ]] ; then
 		echo "Deleting old lease..."
 	 	curl -# -d "{\"account_id\":\"${accid}\",\
 \"public_key\":\"$CLIENTPUB\",\
-\"gateway_id\":\"$(echo $LEASE | sed -E -e "s/.*\"gateway_id\":\"([^\"]*)\",.*/\1/")\"}"\
+\"gateway_id\":\"$(echo $LEASE | jq ".gateway_id")\"}"\
 			-X "DELETE" "http://api.blocka.net/v1/lease"
  		sleep 5
 	fi
 
 	echo "Creating lease..."
-	LEASE=$(curl -# -d "{\"account_id\":\"${accid}\",\
+	LEASE=$(curl -# -d "{\"account_id\":\"$accid\",\
 \"public_key\":\"$CLIENTPUB\",\
-\"gateway_id\":\"$GATEWAYPUB\"}" \
-"http://api.blocka.net/v1/lease"  | sed -E -e "s/.*\{\"account_id\":\"$accid\",\
-\"public_key\":\"$(echo $CLIENTPUB | sed -E -e 's/([/+])/\\\1/')\",([^\}]*)\}.*/\1/")
+\"gateway_id\":$GATEWAYPUB}" \
+"http://api.blocka.net/v1/lease" | jq ".lease")
 	sleep 5
 fi
 
@@ -125,8 +122,8 @@ else
 	read DNS
 fi
 
-ADDRESS=$(echo $LEASE | sed -E -e 's/.*"vip4":"([^"]*)",.*/\1/')
-ENDPOINT=$(echo ${GATEWAYS[$selgateway]} | sed -E -e "s/.*\"ipv4\":\"([^\"]*)\",.*\"port\":([^,]*),.*/\1:\2/")
+ADDRESS=$(echo $LEASE | jq ".vip4" | sed -e 's/\"//g')
+ENDPOINT="$(echo $GATEWAYS | jq ".gateways[$selgateway].ipv4" | sed -e 's/\"//g'):$(echo $GATEWAYS | jq ".gateways[$selgateway].port")"
 
 echo "Creating new config..."
 echo "[Interface]" | sudo tee /etc/wireguard/blokada.conf
@@ -135,7 +132,7 @@ echo "PrivateKey = $(sudo cat blokada_privatekey)" | sudo tee -a /etc/wireguard/
 echo "DNS = $DNS" | sudo tee -a /etc/wireguard/blokada.conf
 echo "" | sudo tee -a /etc/wireguard/blokada.conf
 echo "[Peer]" | sudo tee -a /etc/wireguard/blokada.conf
-echo "PublicKey = $GATEWAYPUB" | sudo tee -a /etc/wireguard/blokada.conf
+echo "PublicKey = $(echo $GATEWAYPUB | sed -e 's/\"//g' )" | sudo tee -a /etc/wireguard/blokada.conf
 echo "Endpoint = $ENDPOINT" | sudo tee -a /etc/wireguard/blokada.conf
 echo "AllowedIPs = 0.0.0.0/0" | sudo tee -a /etc/wireguard/blokada.conf
 echo "PersistentKeepalive = 21" | sudo tee -a /etc/wireguard/blokada.conf

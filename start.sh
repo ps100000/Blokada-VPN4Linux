@@ -17,9 +17,13 @@ echo "                               /////        (((((          "
 echo "                                 /////    (((((            "
 echo "                                   /////(((((              "
 echo "                                     ///((*                "
-echo "What's the account id?"
+
+
+
+echo "What's your account id?(press enter to create a new one)"
 read -n 12 accid
 echo ""
+
 
 echo "Checking for curl and jq installation..."
 
@@ -44,12 +48,33 @@ if (( $? != 0 )); then
 	exit -1
 fi
 
+if [[ -z $accid ]]; then
+	echo "Creating new account..."
+	accid=$(curl -# -XPOST https://api.blocka.net/v1/account | jq .account.id | sed -e 's/\"//g')
+	if [[ -n $(echo $accid | sed -E -e 's/[a-z]{12}//') ]]; then
+		echo "Failed to create new account."
+		exit -1
+	fi
+	echo "Your new account id is $accid. Please write it down as there is no way to recover it later."
+	sleep 5
+	echo "After your done press enter."
+	read
+	echo "Activate your account under https://app.blokada.org/activate/$accid"
+	sleep 5
+	echo "After your done press enter." 
+	read
+fi
+
+if [[ -n $(echo $accid | sed -E -e 's/[a-z]{12}//') ]]; then
+	echo "invalid account id."
+	exit -1
+fi
 
 echo "Checking account state..."
 if [[ $(curl -# "https://api.blocka.net/v1/account?account_id=$accid" | jq .account.active ) == true ]] ; then
 	echo "Account is active. Starting wireguard setup."
 else
-	echo "Account is inactive. Activate your account and try again."
+	echo "Account is inactive. Activate your account under https://app.blokada.org/activate/$accid and try again."
 	exit -1
 fi
 
@@ -167,7 +192,7 @@ fi
 
 echo "Checking old config..."
 
-if sudo test -s /etc/wireguard/blokada.conf && [[ -n $(sudo grep -z "$(sudo cat blokada_privatekey).*$GATEWAYPUB" /etc/wireguard/blokada.conf | tr '\0' '0') ]]; then
+if sudo test -s /etc/wireguard/blokada.conf && [[ -n $(sudo grep -z "$(sudo cat blokada_privatekey).*$(echo $GATEWAYPUB | sed -e 's/\"//g' )" /etc/wireguard/blokada.conf | tr '\0' '0') ]]; then
 	echo "No changes in config."
 	echo "Start wireguard interface now[Y/n]?"
 	read -n 1 start

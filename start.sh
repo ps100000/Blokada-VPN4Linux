@@ -1,16 +1,35 @@
+echo "                                                           "
+echo "                        //         /////((((.         ((   "
+echo "                       /////////////////((((((((((((((((.  "
+echo "                       ////////////////     *((((((((((((  "
+echo "                       ///   ///////////(/           .(((  "
+echo "                       ///      ////////((((          (((  "
+echo "                       ///         /////(((((((       (((  "
+echo "                       ///,////       //((((((((((   *(((  "
+echo "                       ////  ///////     (((((((((((,(((,  "
+echo "                        ///    /////////(   ((((((((((((   "
+echo "                        .///     ,//////(((((, ((((((((    "
+echo "                         ,///       ////((((((((((((((     "
+echo "                          ,////       //(((((((((((((      "
+echo "                            ////         (((((((((((       "
+echo "                             /////         (((((((         "
+echo "                               /////        (((((          "
+echo "                                 /////    (((((            "
+echo "                                   /////(((((              "
+echo "                                     ///((*                "
 echo "What's the account id?"
 read -n 12 accid
 echo ""
 
 echo "Checking for curl and jq installation..."
 
-if  which dpkg-query apt ; then
+if  which dpkg-query apt >& /dev/null; then
 	dpkg-query -W curl jq >& /dev/null
 	if (( $? != 0 )) ; then
 		echo "Installing curl and jq..."
 		sudo apt install -y curl jq >& /dev/null
 	fi
-elif which pacman ; then
+elif which pacman >& /dev/null ; then
 	pacman -Qi curl jq >& /dev/null
 	if (( $? != 0 )) ; then
 		echo "Installing curl and jq..." ;
@@ -37,7 +56,7 @@ fi
 
 echo "Checking for Wireguard installation..."
 
-if  which dpkg-query apt ; then
+if  which dpkg-query apt >& /dev/null ; then
 	dpkg-query -W curl jq >& /dev/null
 	if (( $? != 0 )) ; then
 		echo "Installing wireguard..."
@@ -56,7 +75,7 @@ if  which dpkg-query apt ; then
 		fi
 		sudo apt install -y curl jq >& /dev/null
 	fi
-elif which pacman ; then
+elif which pacman >& /dev/null ; then
 	pacman -Qi curl jq >& /dev/null
 	if (( $? != 0 )) ; then
 		echo "Installing wireguard..." ;
@@ -126,10 +145,22 @@ else
  		sleep 5
 	fi
 
+	if sudo test -s /etc/wireguard/blokada.conf ; then
+		ALIAS=$(sudo grep "#Alias = .*" /etc/wireguard/blokada.conf | sed -e "s/#Alias = //")
+	fi
+	if [[ -z $ALIAS ]]; then
+		echo "What Alias do you want to use? (empty for default)"
+		read ALIAS
+		if [[ -z $ALIAS ]]; then
+			ALIAS="Linux in a box"
+		fi
+	fi
+
 	echo "Creating lease..."
 	LEASE=$(curl -# -d "{\"account_id\":\"$accid\",\
 \"public_key\":\"$CLIENTPUB\",\
-\"gateway_id\":$GATEWAYPUB}" \
+\"gateway_id\":$GATEWAYPUB,\
+\"alias\":\"$ALIAS\"}" \
 "http://api.blocka.net/v1/lease" | jq ".lease")
 	sleep 5
 fi
@@ -150,11 +181,8 @@ fi
 
 if sudo test -s /etc/wireguard/blokada.conf ; then
 	DNS=$(sudo grep "DNS = .*" /etc/wireguard/blokada.conf | sed -e "s/DNS = //")
-	if [[ -z $DNS ]]; then
-		echo "What DNS do you want to use?"
-		read DNS
-	fi
-else
+fi
+if [[ -z $DNS ]]; then
 	echo "What DNS do you want to use?"
 	read DNS
 fi
@@ -173,6 +201,7 @@ echo "PublicKey = $(echo $GATEWAYPUB | sed -e 's/\"//g' )" | sudo tee -a /etc/wi
 echo "Endpoint = $ENDPOINT" | sudo tee -a /etc/wireguard/blokada.conf
 echo "AllowedIPs = 0.0.0.0/0" | sudo tee -a /etc/wireguard/blokada.conf
 echo "PersistentKeepalive = 21" | sudo tee -a /etc/wireguard/blokada.conf
+echo "#Alias = $ALIAS" | sudo tee -a /etc/wireguard/blokada.conf
 echo "" | sudo tee -a /etc/wireguard/blokada.conf
 sudo chmod -rwx /etc/wireguard/
 

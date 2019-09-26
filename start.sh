@@ -98,7 +98,7 @@ if  which dpkg-query apt >& /dev/null ; then
 			echo "unknown distro"
 			exit -1
 		fi
-		sudo apt install -y curl jq >& /dev/null
+		sudo apt install -y wireguard resolvconf >& /dev/null
 	fi
 elif which pacman >& /dev/null ; then
 	pacman -Qi curl jq >& /dev/null

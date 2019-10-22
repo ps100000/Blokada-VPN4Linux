@@ -82,12 +82,12 @@ fi
 echo "Checking for Wireguard installation..."
 
 if  which dpkg-query apt >& /dev/null ; then
-	dpkg-query -W curl jq >& /dev/null
+	dpkg-query -W wireguard resolvconf >& /dev/null
 	if (( $? != 0 )) ; then
 		echo "Installing wireguard..."
 		if [[ -n $(cat /etc/os-release | grep -i 'name=.*kali') ]]; then
 			echo "I <3 Kali"
-		elif [[ -n $(cat /etc/os-release | grep -i 'name=.*buntu') ]]; then
+		elif [[ -n $(cat /etc/os-release | grep -E -i 'name=.*(buntu|mint)') ]]; then
 			sudo add-apt-repository ppa:wireguard/wireguard
 			sudo apt-get update
 		elif [[ -n $(cat /etc/os-release | grep -i 'name=.*debian') ]]; then

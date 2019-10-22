@@ -101,7 +101,7 @@ if  which dpkg-query apt >& /dev/null ; then
 		sudo apt install -y wireguard resolvconf >& /dev/null
 	fi
 elif which pacman >& /dev/null ; then
-	pacman -Qi curl jq >& /dev/null
+	pacman -Qi wireguard-tools wireguard-arch >& /dev/null
 	if (( $? != 0 )) ; then
 		echo "Installing wireguard..." ;
 		sudo pacman -S --noconfirm wireguard-tools wireguard-arch >& /dev/null;

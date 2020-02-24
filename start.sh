@@ -126,9 +126,8 @@ fi
 
 echo "Checking for existing keypair..."
 sudo mkdir -p /etc/wireguard/
-sudo chmod +rwx /etc/wireguard/
+sudo chmod 700 /etc/wireguard/
 cd /etc/wireguard/
-umask 077  # This makes sure credentials don't leak in a race condition.
 sudo [ -d /etc/wireguard/ ] || (echo "Failed creating /etc/wireguard/"; exit -1)
 if sudo test ! -s "/etc/wireguard/blokada_pub" ; then
 	echo "No keypair found. Creating..."
@@ -228,7 +227,6 @@ echo "AllowedIPs = 0.0.0.0/0,::/0" | sudo tee -a /etc/wireguard/blokada.conf
 echo "PersistentKeepalive = 21" | sudo tee -a /etc/wireguard/blokada.conf
 echo "#Alias = $ALIAS" | sudo tee -a /etc/wireguard/blokada.conf
 echo "" | sudo tee -a /etc/wireguard/blokada.conf
-sudo chmod -rwx /etc/wireguard/
 
 echo "Done!"
 echo ""

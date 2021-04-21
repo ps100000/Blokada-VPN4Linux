@@ -196,15 +196,24 @@ if sudo test -s /etc/wireguard/blokada.conf && [[ -n $(sudo grep -z "$(sudo cat 
 	echo "Start wireguard interface now[Y/n]?"
 	read -n 1 start
 	echo ""
-	if [[ -z $start ]] || [[ $start == "y" ]] || [[ $start == "Y" ]]; then
-		sudo wg-quick up blokada >& /dev/null
-		if [[ $? == 0 ]]; then
-                	echo "Wireguard started successfully."
-        	else
-                	echo "Something went wrong; the connection couldn't build up."
-        	fi
-	fi
-	exit 0
+	case $start in
+		y|Y)
+			sudo wg-quick up blokada >& /dev/null
+                	if [[ $? == 0 ]]; then
+                        	echo "Wireguard started successfully."
+                	else
+                        	echo "Something went wrong; the connection couldn't build up."
+				exit 1
+                	fi
+			;;
+		n|N)
+			echo "All right, exiting now."
+			exit 0
+			;;	
+		*)
+			echo "This is not a valid option. Type y(es) or n(o).
+			;;
+	esac
 fi
 
 if sudo test -s /etc/wireguard/blokada.conf ; then
@@ -237,11 +246,21 @@ echo ""
 echo "Start wireguard interface now[Y/n]?"
 read -n 1 start
 echo ""
-if [[ -z $start ]] || [[ $start == "y" ]] || [[ $start == "Y" ]]; then
-	sudo wg-quick up blokada >& /dev/null
-	if [[ $? == 0 ]]; then
-		echo "Wireguard started successfully."
-	else
-		echo "Something went wrong; the connection couldn't build up."
-	fi
-fi
+case $start in
+	y|Y)
+        	sudo wg-quick up blokada >& /dev/null
+                if [[ $? == 0 ]]; then
+                	echo "Wireguard started successfully."
+                else
+                       	echo "Something went wrong; the connection couldn't build up."
+                	exit 1
+                fi
+        	;;
+	n|N)
+        	echo "All right, exiting now."
+        	exit 0
+        	;;
+	*)
+        	echo "This is not a valid option. Type y(es) or n(o).
+		;;
+esac

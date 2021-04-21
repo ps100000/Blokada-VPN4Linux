@@ -198,7 +198,11 @@ if sudo test -s /etc/wireguard/blokada.conf && [[ -n $(sudo grep -z "$(sudo cat 
 	echo ""
 	if [[ -z $start ]] || [[ $start == "y" ]] || [[ $start == "Y" ]]; then
 		sudo wg-quick up blokada >& /dev/null
-		echo "Wireguard started."
+		if [[ $? == 0 ]]; then
+                	echo "Wireguard started successfully."
+        	else
+                	echo "Something went wrong; the connection couldn't build up."
+        	fi
 	fi
 	exit 0
 fi
@@ -235,5 +239,9 @@ read -n 1 start
 echo ""
 if [[ -z $start ]] || [[ $start == "y" ]] || [[ $start == "Y" ]]; then
 	sudo wg-quick up blokada >& /dev/null
-	echo "Wireguard started."
+	if [[ $? == 0 ]]; then
+		echo "Wireguard started successfully."
+	else
+		echo "Something went wrong; the connection couldn't build up."
+	fi
 fi

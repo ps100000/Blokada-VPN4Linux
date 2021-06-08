@@ -5,20 +5,20 @@ start_wireguard () {
 	case $start in
 		y|Y)
 			sudo wg-quick up blokada >& /dev/null
-      			if [[ $? == 0 ]]; then
-        			echo "Wireguard started successfully."
-        		else
-          			echo "Something went wrong; the connection couldn't build up."
-        		exit 1
-        		fi
-       			;;
+			if [[ $? == 0 ]]; then
+				echo "Wireguard started successfully."
+			else
+				echo "Something went wrong; the connection couldn't build up."
+				exit 1
+			fi
+			;;
 		n|N)
-    			echo "All right, exiting now."
-      			exit 0
-      			;;
+			echo "All right, exiting now."
+			exit 0
+			;;
 		*)
-    			echo "This is not a valid option. Type y(es) or n(o)."
-      			start_wireguard
+			echo "This is not a valid option. Type y(es) or n(o)."
+			start_wireguard
 			;;
 	esac
 }

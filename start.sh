@@ -1,3 +1,28 @@
+start_wireguard () {
+	echo "Start wireguard interface now [Y/n]?"
+	read -n 1 start
+	echo ""
+	case $start in
+		y|Y)
+			sudo wg-quick up blokada >& /dev/null
+			if [[ $? == 0 ]]; then
+				echo "Wireguard started successfully."
+			else
+				echo "Something went wrong; the connection couldn't build up."
+				exit 1
+			fi
+			;;
+		n|N)
+			echo "All right, exiting now."
+			exit 0
+			;;
+		*)
+			echo "This is not a valid option. Type y(es) or n(o)."
+			start_wireguard
+			;;
+	esac
+}
+
 echo "                                                           "
 echo "                        //         /////((((.         ((   "
 echo "                       /////////////////((((((((((((((((.  "
@@ -193,14 +218,7 @@ echo "Checking old config..."
 
 if sudo test -s /etc/wireguard/blokada.conf && [[ -n $(sudo grep -z "$(sudo cat blokada_privatekey).*$(echo $GATEWAYPUB | sed -e 's/\"//g' )" /etc/wireguard/blokada.conf | tr '\0' '0') ]]; then
 	echo "No changes in config."
-	echo "Start wireguard interface now[Y/n]?"
-	read -n 1 start
-	echo ""
-	if [[ -z $start ]] || [[ $start == "y" ]] || [[ $start == "Y" ]]; then
-		sudo wg-quick up blokada >& /dev/null
-		echo "Wireguard started."
-	fi
-	exit 0
+	start_wireguard
 fi
 
 if sudo test -s /etc/wireguard/blokada.conf ; then
@@ -230,10 +248,5 @@ echo "" | sudo tee -a /etc/wireguard/blokada.conf
 
 echo "Done!"
 echo ""
-echo "Start wireguard interface now[Y/n]?"
-read -n 1 start
-echo ""
-if [[ -z $start ]] || [[ $start == "y" ]] || [[ $start == "Y" ]]; then
-	sudo wg-quick up blokada >& /dev/null
-	echo "Wireguard started."
-fi
+
+start_wireguard

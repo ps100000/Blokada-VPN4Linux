@@ -241,7 +241,11 @@ echo "" | sudo tee -a /etc/wireguard/blokada.conf
 echo "[Peer]" | sudo tee -a /etc/wireguard/blokada.conf
 echo "PublicKey = $(echo $GATEWAYPUB | sed -e 's/\"//g' )" | sudo tee -a /etc/wireguard/blokada.conf
 echo "Endpoint = $ENDPOINT" | sudo tee -a /etc/wireguard/blokada.conf
-echo "AllowedIPs = 0.0.0.0/0,::/0" | sudo tee -a /etc/wireguard/blokada.conf
+if sudo sysctl -aN | egrep '^net\.ipv6' >/dev/null; then
+    echo "AllowedIPs = 0.0.0.0/0,::/0" | sudo tee -a /etc/wireguard/blokada.conf
+else
+    echo "AllowedIPs = 0.0.0.0/0" | sudo tee -a /etc/wireguard/blokada.conf
+fi
 echo "PersistentKeepalive = 21" | sudo tee -a /etc/wireguard/blokada.conf
 echo "#Alias = $ALIAS" | sudo tee -a /etc/wireguard/blokada.conf
 echo "" | sudo tee -a /etc/wireguard/blokada.conf

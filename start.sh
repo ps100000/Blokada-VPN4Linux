@@ -126,7 +126,7 @@ if  which dpkg-query apt >& /dev/null ; then
 		sudo apt install -y wireguard resolvconf >& /dev/null
 	fi
 elif which pacman >& /dev/null ; then
-	pacman -Qi wireguard-tools wireguard-arch >& /dev/null
+	pacman -Qi wireguard-tools >& /dev/null #wireguard-arch was here before but doesnt acutally exist so was jsut giving an error
 	if (( $? != 0 )) ; then
 		echo "Installing wireguard..." ;
 		sudo pacman -S --noconfirm wireguard-tools wireguard-arch >& /dev/null;
